@@ -254,6 +254,7 @@ namespace SerialCommunication
         {
             timerOefening3.Enabled = tabControl.SelectedIndex == 3;
             timerOefening4.Enabled = tabControl.SelectedIndex == 4;
+            timerOefening5.Enabled = tabControl.SelectedIndex == 5;
         }
 
         private void timerOefening3_Tick(object sender, EventArgs e)
@@ -323,6 +324,73 @@ namespace SerialCommunication
                 buttonConnect.Text = "Connect";
             }
 
+        }
+
+        private void timerOefening5_Tick(object sender, EventArgs e)
+        {
+            try
+            {
+                if (serialPortArduino.IsOpen)
+                {
+                    serialPortArduino.ReadExisting();
+
+                    string commando = "get a0";
+                    serialPortArduino.WriteLine(commando);
+                    string antwoord = serialPortArduino.ReadLine();
+                    antwoord.TrimEnd();
+                    antwoord = antwoord.Substring(4);
+
+                    int adcGewenst = Int32.Parse(antwoord);
+
+                    double gewensteTempafrond = (40.0 / 1023.0) * adcGewenst + 5;
+                    double gewensteTemp = Math.Round(gewensteTempafrond, 1);
+
+                    labelGewensteTemp.Text = string.Format("{0:0.0} °C", gewensteTemp);
+
+
+                    commando = "get a1";
+                    serialPortArduino.WriteLine(commando);
+                    antwoord = serialPortArduino.ReadLine().TrimEnd();
+                    antwoord = antwoord.Substring(4);
+
+                    int adcHuidig = Int32.Parse(antwoord);
+
+                    double huidigeTempafrond = (500.0 / 1023.0) * adcHuidig;
+                    double huidigeTemp = Math.Round(huidigeTempafrond, 1);
+
+                    labelHuidigeTemp.Text = string.Format("{0:0.0} °C", huidigeTemp);
+
+
+                    if (huidigeTemp < gewensteTemp)
+                    {
+                        serialPortArduino.WriteLine("set d2 high");
+                    }
+                    else
+                    {
+                        serialPortArduino.WriteLine("set d2 low");
+                    }
+                }
+                else
+                {
+                    radioButtonVerbonden.Checked = false;
+                    labelStatus.Text = "Geen poort gedetecteerd";
+                    buttonConnect.Text = "Connect";
+
+                }
+            }
+            catch (Exception exception)
+            {
+                labelStatus.Text = "Error: " + exception.Message;
+
+                if (serialPortArduino.IsOpen)
+                {
+                    serialPortArduino.Close();
+                }
+
+                radioButtonVerbonden.Checked = false;
+                buttonConnect.Text = "Connect";
+                labelStatus.Text = "Status: Disconnected";
+            }
         }
     }
 }
